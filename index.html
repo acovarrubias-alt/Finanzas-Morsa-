@@ -1264,10 +1264,14 @@ function getEfectivoReal(){
   var debitos  = m.filter(function(t){ return t.tipo==='gasto' && t.medio==='debito'; }).reduce(function(s,t){ return s+t.amount; },0);
 
   // Créditos: ciclo tarjeta (28 anterior → 27 actual)
+  // Comparar como strings YYYY-MM-DD para evitar problemas UTC
+  var cicloStartStr = ciclo.start.getFullYear()+'-'+String(ciclo.start.getMonth()+1).padStart(2,'0')+'-'+String(ciclo.start.getDate()).padStart(2,'0');
+  var cicloEndStr   = ciclo.end.getFullYear()+'-'+String(ciclo.end.getMonth()+1).padStart(2,'0')+'-'+String(ciclo.end.getDate()).padStart(2,'0');
   var creditosTx = txns.filter(function(t){
     if(t.tipo!=='gasto' || t.medio!=='credito') return false;
-    var d = new Date(t.date);
-    return d >= ciclo.start && d <= ciclo.end;
+    if(!t.date) return false;
+    var ds = t.date.slice(0,10);
+    return ds >= cicloStartStr && ds <= cicloEndStr;
   });
   var creditos = creditosTx.reduce(function(s,t){ return s+t.amount; },0);
 
