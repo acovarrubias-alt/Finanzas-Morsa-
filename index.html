@@ -773,7 +773,11 @@ function updateAll(){ updateStats(); updateCatBars(); populateMesFilter(); updat
 
 function delTx(id){
   if(!confirm('¿Eliminar este movimiento?')) return;
-  txns=txns.filter(t=>t.id!==id); saveTxns(); updateAll();
+  var t = txns.find(function(x){ return x.id===id; });
+  txns = txns.filter(function(x){ return x.id!==id; });
+  localStorage.setItem('morsa_txns', JSON.stringify(txns));
+  updateAll();
+  updateEfectivo();
 }
 
 function setFilter(mode,btn){
@@ -839,7 +843,10 @@ function updateInvAll(){
 
 function delInv(id){
   if(!confirm('¿Eliminar esta inversión?')) return;
-  invs=invs.filter(i=>i.id!==id); saveInvs(); updateInvAll();
+  invs = invs.filter(function(i){ return i.id!==id; });
+  localStorage.setItem('morsa_invs', JSON.stringify(invs));
+  updateInvAll();
+  updateEfectivo();
 }
 
 function openUpdateModal(id){
