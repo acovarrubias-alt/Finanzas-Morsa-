@@ -1227,18 +1227,52 @@ function selMedio(m){
   document.getElementById('medio-credito').className = 'medio-opt credito' + (m==='credito'?' sel':'');
 }
 
-function getEfectivoReal(){
-  // efectivoBase - debitos del mes - inversiones del mes + ingresos del mes
+function getCicloTarjeta(){
+  // Ciclo: del 28 del mes anterior al 27 del mes actual
   var now = new Date();
+  var day = now.getDate();
+  var year = now.getFullYear();
+  var month = now.getMonth(); // 0-indexed
+
+  var cicloStart, cicloEnd;
+  if(day <= 27){
+    // Estamos entre 1-27: ciclo va del 28 del mes pasado al 27 de este mes
+    var prevMonth = month === 0 ? 11 : month - 1;
+    var prevYear  = month === 0 ? year - 1 : year;
+    cicloStart = new Date(prevYear, prevMonth, 28);
+    cicloEnd   = new Date(year, month, 27);
+  } else {
+    // Estamos entre 28-31: ya arrancó el nuevo ciclo
+    cicloStart = new Date(year, month, 28);
+    var nextMonth = month === 11 ? 0 : month + 1;
+    var nextYear  = month === 11 ? year + 1 : year;
+    cicloEnd   = new Date(nextYear, nextMonth, 27);
+  }
+  return { start: cicloStart, end: cicloEnd };
+}
+
+function getEfectivoReal(){
+  var now = new Date();
+  var ciclo = getCicloTarjeta();
+
+  // Débitos e ingresos: mes calendario actual
   var m = txns.filter(function(t){
     var d=new Date(t.date);
     return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
   });
   var ingresos = m.filter(function(t){ return t.tipo==='ingreso'; }).reduce(function(s,t){ return s+t.amount; },0);
   var debitos  = m.filter(function(t){ return t.tipo==='gasto' && t.medio==='debito'; }).reduce(function(s,t){ return s+t.amount; },0);
-  var creditos = m.filter(function(t){ return t.tipo==='gasto' && t.medio==='credito'; }).reduce(function(s,t){ return s+t.amount; },0);
-  var invertido= invs.reduce(function(s,i){ return s+i.capital; },0);
-  return { saldo: efectivoBase + ingresos - debitos - invertido, debitos: debitos, creditos: creditos, invertido: invertido };
+
+  // Créditos: ciclo tarjeta (28 anterior → 27 actual)
+  var creditosTx = txns.filter(function(t){
+    if(t.tipo!=='gasto' || t.medio!=='credito') return false;
+    var d = new Date(t.date);
+    return d >= ciclo.start && d <= ciclo.end;
+  });
+  var creditos = creditosTx.reduce(function(s,t){ return s+t.amount; },0);
+
+  var invertido = invs.reduce(function(s,i){ return s+i.capital; },0);
+  return { saldo: efectivoBase + ingresos - debitos - invertido, debitos: debitos, creditos: creditos, invertido: invertido, cicloStart: ciclo.start, cicloEnd: ciclo.end };
 }
 
 function updateEfectivo(){
@@ -1253,6 +1287,8 @@ function updateEfectivo(){
   if(e.creditos > 0){
     creditoBar.classList.add('show');
     document.getElementById('creditoBarAmt').textContent = fmtFull(e.creditos);
+    var cicloLabel = e.cicloStart.toLocaleDateString('es-CL',{day:'numeric',month:'short'}) + ' → ' + e.cicloEnd.toLocaleDateString('es-CL',{day:'numeric',month:'short'});
+    document.querySelector('.credito-bar-text').textContent = '⚠️ Deuda tarjeta ciclo ' + cicloLabel;
     // Add pay button if not there
     if(!document.getElementById('pagarTarjetaBtn')){
       var btn = document.createElement('button');
@@ -1294,10 +1330,10 @@ function confirmarPagoTarjeta(){
   // Mark all credit txns as paid (move to paid state) by registering a "pago tarjeta" debit
   txns.push({id:Date.now(), tipo:'gasto', desc:'Pago tarjeta de crédito', amount:e.creditos, cat:'otro', medio:'debito-tarjeta', date:today()});
   // Mark all credit txns this month as pagado
-  var now = new Date();
+  var ciclo = getCicloTarjeta();
   txns.forEach(function(t){
     var d=new Date(t.date);
-    if(t.medio==='credito' && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear()){
+    if(t.medio==='credito' && d >= ciclo.start && d <= ciclo.end){
       t.medio='credito-pagado';
     }
   });
