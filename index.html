@@ -353,6 +353,16 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); pad
         <div class="tipo-opt ingreso" id="tipo-ingreso" onclick="selTipo('ingreso')">💵 Ingreso</div>
       </div>
     </div>
+    <div class="field" id="quickIngField" style="display:none;">
+      <label>Acceso rápido</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button type="button" class="filter-btn" onclick="quickIngreso('Sueldo')">💼 Sueldo</button>
+        <button type="button" class="filter-btn" onclick="quickIngreso('Freelance')">💻 Freelance</button>
+        <button type="button" class="filter-btn" onclick="quickIngreso('Bono')">🎁 Bono</button>
+        <button type="button" class="filter-btn" onclick="quickIngreso('Arriendo')">🏠 Arriendo</button>
+        <button type="button" class="filter-btn" onclick="quickIngreso('Otro ingreso')">📦 Otro</button>
+      </div>
+    </div>
     <div class="field"><label>Descripción</label><input type="text" id="mDesc" placeholder="ej: Almuerzo, Uber, Supermercado..."></div>
     <div class="field"><label>Monto (CLP)</label><input type="number" id="mAmount" placeholder="ej: 15000"></div>
     <div class="field">
@@ -710,7 +720,24 @@ function saveUpdate(){
 // ── MODALS GASTOS ──
 function openModal(){ document.getElementById('mDate').value=today(); document.getElementById('overlay').classList.add('open'); setTimeout(()=>document.getElementById('mDesc').focus(),100); }
 function closeModal(){ document.getElementById('overlay').classList.remove('open'); document.getElementById('mDesc').value=''; document.getElementById('mAmount').value=''; }
-function selTipo(t){ selTipoVal=t; document.getElementById('tipo-gasto').className='tipo-opt gasto'+(t==='gasto'?' sel':''); document.getElementById('tipo-ingreso').className='tipo-opt ingreso'+(t==='ingreso'?' sel':''); }
+function selTipo(t){
+  selTipoVal=t;
+  document.getElementById('tipo-gasto').className='tipo-opt gasto'+(t==='gasto'?' sel':'');
+  document.getElementById('tipo-ingreso').className='tipo-opt ingreso'+(t==='ingreso'?' sel':'');
+  document.getElementById('quickIngField').style.display = t==='ingreso' ? 'block' : 'none';
+  // Update cat grid for ingreso
+  if(t==='ingreso'){
+    selCatVal='otro';
+    document.querySelectorAll('.cat-opt').forEach(b=>b.classList.remove('sel'));
+    var otroBtn = document.querySelector('.cat-opt[data-cat="otro"]');
+    if(otroBtn) otroBtn.classList.add('sel');
+  }
+}
+
+function quickIngreso(desc){
+  document.getElementById('mDesc').value = desc;
+  document.getElementById('mDesc').focus();
+}
 function selCat(el){ document.querySelectorAll('.cat-opt').forEach(b=>b.classList.remove('sel')); el.classList.add('sel'); selCatVal=el.dataset.cat; }
 function saveTx(){
   var descEl = document.getElementById('mDesc');
