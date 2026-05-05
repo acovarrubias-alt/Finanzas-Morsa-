@@ -759,9 +759,11 @@ function populateMesFilter(){
   // Keep "todos" option, rebuild the rest
   while(sel.options.length>1) sel.remove(1);
   sorted.forEach(function(ym){
-    var d=new Date(ym+'-01');
-    var label=d.toLocaleString('es-CL',{month:'long',year:'numeric'});
-    var opt=document.createElement('option');
+    // Usar parseLocalDate para evitar UTC bug
+    var parts = ym.split('-');
+    var d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, 1);
+    var label = d.toLocaleString('es-CL',{month:'long',year:'numeric'});
+    var opt = document.createElement('option');
     opt.value=ym; opt.textContent=label;
     sel.appendChild(opt);
   });
