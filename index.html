@@ -662,8 +662,9 @@ function switchPage(name, btn){
 
 // ── GASTOS STATS ──
 function getMonthTxns(){
-  const now=new Date();
-  return txns.filter(t=>{const d=new Date(t.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  var now = new Date();
+  var curYM = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  return txns.filter(function(t){ return dateToYM(t.date) === curYM; });
 }
 
 function updateStats(){
@@ -731,7 +732,7 @@ function updateTxList(){
     var sign = t.tipo==='ingreso'?'+':'-';
     var cls  = t.tipo==='ingreso'?'pos':'neg';
     var info = CATS[t.cat]||{emoji:'📦',label:t.cat};
-    var fecha = new Date(t.date).toLocaleDateString('es-CL',{day:'numeric',month:'short'});
+    var fecha = dateDisplay(t.date);
     var medioBadge = '';
     if(t.tipo==='gasto'){
       if(t.medio==='credito') medioBadge = '<span style="background:var(--purple-light);color:var(--purple);border:1px solid #d7bde2;padding:2px 8px;border-radius:10px;font-size:11px;">🔵 Crédito</span>';
@@ -813,7 +814,7 @@ function updateInvAll(){
     const pnlPct=inv.capital>0?((pnl/inv.capital)*100).toFixed(1):0;
     const cls=pnl>=0?'pos':'neg';
     const info=INV_TYPES[inv.tipo]||{emoji:'💼',label:inv.tipo};
-    const fecha=new Date(inv.date).toLocaleDateString('es-CL',{day:'numeric',month:'short',year:'numeric'});
+    var fecha=dateDisplay(inv.date,{day:'numeric',month:'short',year:'numeric'});
     return `<div class="inv-card">
       <div class="inv-card-left">
         <div class="inv-type-badge" style="background:var(--purple-light);border:1px solid #d7bde2;">${info.emoji}</div>
@@ -1194,7 +1195,7 @@ function updateDeudas(){
   list.innerHTML = sorted.map(function(d){
     var isPend = !d.pagado;
     var isMe   = d.tipo === 'medeben';
-    var fecha  = new Date(d.fecha).toLocaleDateString('es-CL',{day:'numeric',month:'short',year:'numeric'});
+    var fecha  = dateDisplay(d.fecha,{day:'numeric',month:'short',year:'numeric'});
     var badge  = isMe
       ? '<span style="background:var(--accent-light);color:var(--accent);border:1px solid #b7d9c4;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:500;">💰 Me debe</span>'
       : '<span style="background:var(--red-light);color:var(--red);border:1px solid #f5c6c3;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:500;">💸 Yo debo</span>';
@@ -1227,6 +1228,23 @@ function selMedio(m){
   document.getElementById('medio-credito').className = 'medio-opt credito' + (m==='credito'?' sel':'');
 }
 
+function parseLocalDate(str){
+  // Evita el problema UTC: '2026-05-01' en UTC se convierte a 30 abril en Chile
+  if(!str) return new Date();
+  var parts = str.slice(0,10).split('-');
+  return new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+}
+function dateToYM(str){
+  // Retorna 'YYYY-MM' usando hora local
+  if(!str) return '';
+  return str.slice(0,7);
+}
+function dateDisplay(str, opts){
+  // Muestra fecha sin problema UTC
+  if(!str) return '';
+  var d = parseLocalDate(str);
+  return d.toLocaleDateString('es-CL', opts||{day:'numeric',month:'short'});
+}
 function getCicloTarjeta(){
   // Ciclo: del 28 del mes anterior al 27 del mes actual
   var now = new Date();
@@ -1256,10 +1274,8 @@ function getEfectivoReal(){
   var ciclo = getCicloTarjeta();
 
   // Débitos e ingresos: mes calendario actual
-  var m = txns.filter(function(t){
-    var d=new Date(t.date);
-    return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
-  });
+  var curYM = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var m = txns.filter(function(t){ return dateToYM(t.date) === curYM; });
   var ingresos = m.filter(function(t){ return t.tipo==='ingreso'; }).reduce(function(s,t){ return s+t.amount; },0);
   var debitos  = m.filter(function(t){ return t.tipo==='gasto' && t.medio==='debito'; }).reduce(function(s,t){ return s+t.amount; },0);
 
@@ -1335,9 +1351,10 @@ function confirmarPagoTarjeta(){
   txns.push({id:Date.now(), tipo:'gasto', desc:'Pago tarjeta de crédito', amount:e.creditos, cat:'otro', medio:'debito-tarjeta', date:today()});
   // Mark all credit txns this month as pagado
   var ciclo = getCicloTarjeta();
+  var cicloStartStr2 = ciclo.start.getFullYear()+'-'+String(ciclo.start.getMonth()+1).padStart(2,'0')+'-'+String(ciclo.start.getDate()).padStart(2,'0');
+  var cicloEndStr2   = ciclo.end.getFullYear()+'-'+String(ciclo.end.getMonth()+1).padStart(2,'0')+'-'+String(ciclo.end.getDate()).padStart(2,'0');
   txns.forEach(function(t){
-    var d=new Date(t.date);
-    if(t.medio==='credito' && d >= ciclo.start && d <= ciclo.end){
+    if(t.medio==='credito' && t.date && t.date.slice(0,10) >= cicloStartStr2 && t.date.slice(0,10) <= cicloEndStr2){
       t.medio='credito-pagado';
     }
   });
