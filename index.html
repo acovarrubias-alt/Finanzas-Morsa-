@@ -698,7 +698,7 @@ function updateCatBars(){
   const m=getMonthTxns(), gastos=m.filter(t=>t.tipo==='gasto');
   const total=gastos.reduce((s,t)=>s+t.amount,0), byCat={};
   gastos.forEach(t=>{byCat[t.cat]=(byCat[t.cat]||0)+t.amount;});
-  const sorted=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const sorted=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
   const container=document.getElementById('catBars');
   if(!sorted.length){container.innerHTML='<div style="font-size:12px;color:var(--text2);">Sin gastos registrados</div>';return;}
   container.innerHTML=sorted.map(([cat,amt])=>{
